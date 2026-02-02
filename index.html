@@ -1,41 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
   <title>Barcode Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- QuaggaJS -->
-  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
 
   <style>
     body {
       background: #020617;
       color: white;
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       text-align: center;
     }
-    #scanner {
-      width: 100%;
+    video {
+      width: 95%;
       max-width: 400px;
-      height: 300px;
-      margin: 15px auto;
-      border: 2px solid #22d3ee;
       border-radius: 10px;
+      border: 2px solid #22d3ee;
+      margin-top: 10px;
     }
     button {
       padding: 12px 24px;
-      margin: 10px;
+      margin: 12px;
       background: #22d3ee;
       border: none;
       border-radius: 8px;
       font-size: 16px;
-      cursor: pointer;
-    }
-    #status {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #38bdf8;
     }
   </style>
 </head>
@@ -44,77 +33,51 @@
 
 <h2>📷 Barcode Scanner</h2>
 
-<div id="scanner"></div>
-
-<button onclick="startScanner()">Start Scan</button>
-
-<div id="status">Status: Idle</div>
+<video id="video" autoplay></video><br>
+<button onclick="startScan()">Start Scan</button>
 
 <script>
-const statusEl = document.getElementById("status");
-
-// ✅ YOUR GOOGLE SCRIPT URL (already correct)
 const GOOGLE_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwiVwDFnspMbp29p7XKR0i-I-ZpMQTjvX5Uk2NaCpQiyJSlzbwDDoH4Vb3XG3WFwc7C/exec";
 
-function startScanner() {
-  statusEl.innerText = "Status: Starting camera...";
+const video = document.getElementById("video");
 
-  Quagga.init({
-    inputStream: {
-      name: "Live",
-      type: "LiveStream",
-      target: document.querySelector("#scanner"),
-      constraints: {
-        facingMode: "environment"   // 👈 BACK CAMERA
-      }
-    },
-    decoder: {
-      readers: [
-        "ean_reader",
-        "ean_8_reader",
-        "code_128_reader",
-        "upc_reader",
-        "upc_e_reader",
-        "qr_reader"
-      ]
-    }
-  }, function (err) {
-    if (err) {
-      console.error(err);
-      statusEl.innerText = "Camera error: " + err;
-      alert("Camera error: " + err);
-      return;
-    }
-    Quagga.start();
-    statusEl.innerText = "Status: Camera running, scan now";
+async function startScan() {
+  if (!("BarcodeDetector" in window)) {
+    alert("BarcodeDetector not supported. Use Chrome.");
+    return;
+  }
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "environment" }
   });
 
-  Quagga.onDetected(onDetected);
+  video.srcObject = stream;
+
+  const detector = new BarcodeDetector({
+    formats: ["qr_code", "ean_13", "code_128", "upc_a"]
+  });
+
+  setInterval(async () => {
+    const barcodes = await detector.detect(video);
+    if (barcodes.length > 0) {
+      const code = barcodes[0].rawValue;
+      stream.getTracks().forEach(t => t.stop());
+      saveToSheet(code);
+      alert("Scanned ✔️\n" + code);
+    }
+  }, 800);
 }
 
-function onDetected(result) {
-  const code = result.codeResult.code;
-
-  statusEl.innerText = "Scanned: " + code;
-
-  Quagga.stop();
-  Quagga.offDetected(onDetected);
-
-  sendToGoogleSheet(code);
-}
-
-function sendToGoogleSheet(code) {
+function saveToSheet(code) {
   fetch(GOOGLE_SCRIPT_URL, {
     method: "POST",
-    mode: "no-cors",   // 👈 IMPORTANT for Apps Script
+    mode: "no-cors",
     body: JSON.stringify({
       barcode: code,
       device: navigator.userAgent
     })
   });
-
-  alert("Saved to Google Sheet ✔️\n" + code);
 }
 </script>
 
