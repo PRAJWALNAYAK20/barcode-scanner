@@ -1,104 +1,73 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Secure Scanner</title>
+  <title>Barcode Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <style>
-    body {
-      background: #020617;
-      color: white;
-      font-family: Arial;
-      text-align: center;
-    }
-    video {
-      width: 95%;
-      max-width: 400px;
-      border-radius: 10px;
-      border: 2px solid #22d3ee;
-      margin-top: 10px;
-    }
-    input, button {
-      padding: 10px;
-      margin: 8px;
-      border-radius: 6px;
-      border: none;
-      width: 80%;
-    }
-    button {
-      background: #22d3ee;
-      font-size: 16px;
-    }
-  </style>
 </head>
 
-<body>
+<body style="text-align:center;font-family:Arial">
 
-<h2>📷 Barcode Scanner</h2>
-
-<input id="userId" placeholder="Enter User ID" required />
-
-<video id="video" autoplay></video><br>
+<h2>Scanner</h2>
+<video id="video" autoplay playsinline style="width:90%"></video>
+<br><br>
 <button onclick="startScan()">Start Scan</button>
+<p id="status"></p>
 
 <script>
-const GOOGLE_SCRIPT_URL =
+const video = document.getElementById("video");
+const status = document.getElementById("status");
+
+const SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbwiVwDFnspMbp29p7XKR0i-I-ZpMQTjvX5Uk2NaCpQiyJSlzbwDDoH4Vb3XG3WFwc7C/exec";
 
-const video = document.getElementById("video");
+let scanning = false;
 
 async function startScan() {
-  const userId = document.getElementById("userId").value;
-  if (!userId) {
-    alert("Enter User ID first");
-    return;
-  }
+  if (scanning) return;
+  scanning = true;
+
+  status.innerText = "Opening camera...";
 
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { facingMode: "environment" }
   });
+
   video.srcObject = stream;
 
-  const detector = new BarcodeDetector({
-    formats: ["qr_code", "ean_13", "code_128"]
-  });
+  if (!("BarcodeDetector" in window)) {
+    status.innerText = "BarcodeDetector not supported. Use Chrome.";
+    return;
+  }
 
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
+  const detector = new BarcodeDetector({ formats: ["qr_code", "ean_13", "code_128"] });
 
-    const scanLoop = setInterval(async () => {
-      const codes = await detector.detect(video);
-      if (codes.length > 0) {
-        clearInterval(scanLoop);
-        stream.getTracks().forEach(t => t.stop());
+  status.innerText = "Scanning...";
 
-        sendToSheet({
-          barcode: codes[0].rawValue,
-          userId,
-          latitude: lat,
-          longitude: lon,
-          device: navigator.userAgent
-        });
+  const interval = setInterval(async () => {
+    const codes = await detector.detect(video);
 
-        alert("Scan Saved ✔️");
-      }
-    }, 800);
-  });
+    if (codes.length > 0) {
+      clearInterval(interval);
+      stream.getTracks().forEach(t => t.stop());
+
+      const value = codes[0].rawValue;
+      status.innerText = "Scanned: " + value;
+
+      saveToSheet(value);
+      scanning = false;
+    }
+  }, 1000);
 }
 
-function sendToSheet(data) {
-fetch("https://script.google.com/macros/s/AKfycbwiVwDFnspMbp29p7XKR0i-I-ZpMQTjvX5Uk2NaCpQiyJSlzbwDDoH4Vb3XG3WFwc7C/exec", {
-  method: "POST",
-  mode: "no-cors",
-  body: JSON.stringify({
-    barcode: scannedValue,
-    userId: userId,
-    latitude: lat,
-    longitude: lon,
-    device: navigator.userAgent
-  })
-});
+function saveToSheet(value) {
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: JSON.stringify({
+      barcode: value,
+      device: navigator.userAgent
+    })
+  });
 }
 </script>
 
