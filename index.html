@@ -88,11 +88,17 @@ async function startScan() {
 }
 
 function sendToSheet(data) {
-  fetch(GOOGLE_SCRIPT_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify(data)
-  });
+fetch("https://script.google.com/macros/s/AKfycbwiVwDFnspMbp29p7XKR0i-I-ZpMQTjvX5Uk2NaCpQiyJSlzbwDDoH4Vb3XG3WFwc7C/exec", {
+  method: "POST",
+  mode: "no-cors",
+  body: JSON.stringify({
+    barcode: scannedValue,
+    userId: userId,
+    latitude: lat,
+    longitude: lon,
+    device: navigator.userAgent
+  })
+});
 }
 </script>
 
