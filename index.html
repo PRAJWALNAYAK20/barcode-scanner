@@ -8,14 +8,20 @@
 <body style="text-align:center;font-family:Arial">
 
 <h2>Scanner</h2>
+
+<input id="userId" placeholder="Enter User ID" style="padding:8px;width:80%" />
+<br><br>
+
 <video id="video" autoplay playsinline style="width:90%"></video>
 <br><br>
+
 <button onclick="startScan()">Start Scan</button>
 <p id="status"></p>
 
 <script>
 const video = document.getElementById("video");
 const status = document.getElementById("status");
+const userIdInput = document.getElementById("userId");
 
 const SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbwiVwDFnspMbp29p7XKR0i-I-ZpMQTjvX5Uk2NaCpQiyJSlzbwDDoH4Vb3XG3WFwc7C/exec";
@@ -23,6 +29,11 @@ const SCRIPT_URL =
 let scanning = false;
 
 async function startScan() {
+  if (!userIdInput.value) {
+    alert("Please enter User ID");
+    return;
+  }
+
   if (scanning) return;
   scanning = true;
 
@@ -33,11 +44,6 @@ async function startScan() {
   });
 
   video.srcObject = stream;
-
-  if (!("BarcodeDetector" in window)) {
-    status.innerText = "BarcodeDetector not supported. Use Chrome.";
-    return;
-  }
 
   const detector = new BarcodeDetector({
     formats: ["qr_code", "ean_13", "code_128"]
@@ -62,13 +68,18 @@ async function startScan() {
 }
 
 function saveToSheet(value) {
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify({
-      barcode: value,
-      device: navigator.userAgent
-    })
+  navigator.geolocation.getCurrentPosition(pos => {
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      body: JSON.stringify({
+        barcode: value,
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        userId: userIdInput.value,
+        device: navigator.userAgent
+      })
+    });
   });
 }
 </script>
