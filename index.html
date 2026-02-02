@@ -71,7 +71,7 @@ function saveToSheet(value) {
   navigator.geolocation.getCurrentPosition(pos => {
     fetch(SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         barcode: value,
         latitude: pos.coords.latitude,
@@ -79,7 +79,10 @@ function saveToSheet(value) {
         userId: userIdInput.value,
         device: navigator.userAgent
       })
-    });
+    })
+    .then(r => r.text())
+    .then(t => console.log("Server:", t))
+    .catch(e => console.error(e));
   });
 }
 </script>
