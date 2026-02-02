@@ -36,24 +36,51 @@
 
 <script>
 const codeReader = new ZXing.BrowserBarcodeReader();
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwiVwDFnspMbp29p7XKR0i-I-ZpMQTjvX5Uk2NaCpQiyJSlzbwDDoH4Vb3XG3WFwc7C/exec";
+const GOOGLE_SCRIPT_URL = "PASTE_YOUR_GOOGLE_SCRIPT_URL";
+const videoElement = document.getElementById("video");
 
-function startScan() {
-  codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
-    if (result) {
-      fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({
-          barcode: result.text,
-          device: navigator.userAgent
-        })
-      });
-      alert("Saved to Google Sheet ✔️");
-      codeReader.reset();
+async function startScan() {
+  try {
+    const devices = await codeReader.getVideoInputDevices();
+
+    if (devices.length === 0) {
+      alert("No camera found");
+      return;
     }
+
+    // Prefer BACK camera
+    const backCamera = devices.find(d =>
+      d.label.toLowerCase().includes("back")
+    ) || devices[0];
+
+    codeReader.decodeFromVideoDevice(
+      backCamera.deviceId,
+      videoElement,
+      (result, err) => {
+        if (result) {
+          saveToSheet(result.text);
+          alert("Scanned ✔️\n" + result.text);
+          codeReader.reset();
+        }
+      }
+    );
+
+  } catch (e) {
+    alert("Camera error: " + e);
+  }
+}
+
+function saveToSheet(data) {
+  fetch(GOOGLE_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      barcode: data,
+      device: navigator.userAgent
+    })
   });
 }
 </script>
+
 
 </body>
 </html>
