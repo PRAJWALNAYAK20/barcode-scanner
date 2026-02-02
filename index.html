@@ -1,130 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Smart Barcode Scanner</title>
+  <title>Barcode Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: "Segoe UI", Roboto, Arial, sans-serif;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at top, #0f172a, #020617);
-      color: #e5e7eb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-
-    .card {
-      width: 100%;
-      max-width: 420px;
-      background: rgba(15, 23, 42, 0.95);
-      border-radius: 18px;
-      padding: 20px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-      border: 1px solid rgba(148,163,184,0.15);
-    }
-
-    h1 {
-      margin: 0 0 12px;
-      font-size: 22px;
-      text-align: center;
-      color: #38bdf8;
-      letter-spacing: 0.5px;
-    }
-
-    p.subtitle {
-      margin: 0 0 16px;
-      font-size: 13px;
-      text-align: center;
-      color: #94a3b8;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: none;
-      outline: none;
-      background: #020617;
-      color: #e5e7eb;
-      border: 1px solid rgba(148,163,184,0.25);
-      margin-bottom: 14px;
-      font-size: 14px;
-    }
-
-    input::placeholder {
-      color: #64748b;
-    }
-
-    video {
-      width: 100%;
-      border-radius: 14px;
-      margin-bottom: 14px;
-      border: 1px solid rgba(148,163,184,0.2);
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      border-radius: 12px;
-      border: none;
-      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
-      color: #020617;
-      font-weight: 600;
-      font-size: 15px;
-      cursor: pointer;
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
-      box-shadow: 0 8px 20px rgba(56,189,248,0.35);
-    }
-
-    button:active {
-      transform: scale(0.98);
-      box-shadow: 0 4px 10px rgba(56,189,248,0.25);
-    }
-
-    #status {
-      margin-top: 14px;
-      text-align: center;
-      font-size: 14px;
-      color: #a5f3fc;
-      min-height: 18px;
-    }
-
-    footer {
-      margin-top: 14px;
-      text-align: center;
-      font-size: 11px;
-      color: #64748b;
-    }
-  </style>
 </head>
 
-<body>
+<body style="text-align:center;font-family:Arial">
 
-  <div class="card">
-    <h1>📷 Smart Scanner</h1>
-    <p class="subtitle">Scan QR / Barcodes securely</p>
+<h2>Scanner</h2>
 
-    <input id="userId" placeholder="Enter User ID (required)" />
+<input id="userId" placeholder="Enter User ID" style="padding:8px;width:80%" />
+<br><br>
 
-    <video id="video" autoplay playsinline></video>
+<video id="video" autoplay playsinline style="width:90%"></video>
+<br><br>
 
-    <button onclick="startScan()">Start Scan</button>
-
-    <div id="status"></div>
-
-    <footer>
-      Data stored securely in Google Sheets
-    </footer>
-  </div>
+<button onclick="startScan()">Start Scan</button>
+<p id="status"></p>
 
 <script>
 const video = document.getElementById("video");
@@ -137,7 +29,7 @@ const SCRIPT_URL =
 let scanning = false;
 
 async function startScan() {
-  if (!userIdInput.value.trim()) {
+  if (!userIdInput.value) {
     alert("Please enter User ID");
     return;
   }
@@ -145,7 +37,7 @@ async function startScan() {
   if (scanning) return;
   scanning = true;
 
-  status.innerText = "📸 Opening camera...";
+  status.innerText = "Opening camera...";
 
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { facingMode: "environment" }
@@ -157,7 +49,7 @@ async function startScan() {
     formats: ["qr_code", "ean_13", "code_128"]
   });
 
-  status.innerText = "🔍 Scanning...";
+  status.innerText = "Scanning...";
 
   const interval = setInterval(async () => {
     const codes = await detector.detect(video);
@@ -167,12 +59,12 @@ async function startScan() {
       stream.getTracks().forEach(t => t.stop());
 
       const value = codes[0].rawValue;
-      status.innerText = "✅ Scanned successfully";
+      status.innerText = "Scanned: " + value;
 
       saveToSheet(value);
       scanning = false;
     }
-  }, 900);
+  }, 1000);
 }
 
 function saveToSheet(value) {
