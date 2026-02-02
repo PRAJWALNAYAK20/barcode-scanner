@@ -39,7 +39,9 @@ async function startScan() {
     return;
   }
 
-  const detector = new BarcodeDetector({ formats: ["qr_code", "ean_13", "code_128"] });
+  const detector = new BarcodeDetector({
+    formats: ["qr_code", "ean_13", "code_128"]
+  });
 
   status.innerText = "Scanning...";
 
