@@ -1,88 +1,63 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Barcode Scanner</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Smart Barcode Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
-<body style="text-align:center;font-family:Arial">
+<body>
 
-<h2>Scanner</h2>
-
-<input id="userId" placeholder="Enter User ID" style="padding:8px;width:80%" />
-<br><br>
-
-<video id="video" autoplay playsinline style="width:90%"></video>
-<br><br>
-
+<input id="userId" placeholder="Enter User ID" />
+<video id="video" autoplay playsinline></video>
 <button onclick="startScan()">Start Scan</button>
-<p id="status"></p>
+<div id="status"></div>
 
 <script>
+const SCRIPT_URL = "PASTE_YOUR_NEW_DEPLOYED_URL_HERE";
 const video = document.getElementById("video");
-const status = document.getElementById("status");
 const userIdInput = document.getElementById("userId");
-
-const SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbwiVwDFnspMbp29p7XKR0i-I-ZpMQTjvX5Uk2NaCpQiyJSlzbwDDoH4Vb3XG3WFwc7C/exec";
+const status = document.getElementById("status");
 
 let scanning = false;
 
 async function startScan() {
   if (!userIdInput.value) {
-    alert("Please enter User ID");
+    alert("Enter User ID");
     return;
   }
-
-  if (scanning) return;
-  scanning = true;
-
-  status.innerText = "Opening camera...";
 
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { facingMode: "environment" }
   });
 
   video.srcObject = stream;
-
-  const detector = new BarcodeDetector({
-    formats: ["qr_code", "ean_13", "code_128"]
-  });
-
-  status.innerText = "Scanning...";
+  const detector = new BarcodeDetector({ formats: ["qr_code"] });
 
   const interval = setInterval(async () => {
     const codes = await detector.detect(video);
-
-    if (codes.length > 0) {
+    if (codes.length) {
       clearInterval(interval);
       stream.getTracks().forEach(t => t.stop());
-
-      const value = codes[0].rawValue;
-      status.innerText = "Scanned: " + value;
-
-      saveToSheet(value);
-      scanning = false;
+      saveToSheet(codes[0].rawValue);
     }
-  }, 1000);
+  }, 800);
 }
 
 function saveToSheet(value) {
   navigator.geolocation.getCurrentPosition(pos => {
+    const form = new FormData();
+    form.append("barcode", value);
+    form.append("latitude", pos.coords.latitude);
+    form.append("longitude", pos.coords.longitude);
+    form.append("userId", userIdInput.value);
+    form.append("device", navigator.userAgent);
+
     fetch(SCRIPT_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        barcode: value,
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        userId: userIdInput.value,
-        device: navigator.userAgent
-      })
-    })
-    .then(r => r.text())
-    .then(t => console.log("Server:", t))
-    .catch(e => console.error(e));
+      mode: "no-cors",
+      body: form
+    });
   });
 }
 </script>
