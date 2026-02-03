@@ -4,14 +4,127 @@
 <meta charset="UTF-8">
 <title>Smart Barcode Scanner</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  * {
+    box-sizing: border-box;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0f172a, #020617);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e5e7eb;
+    padding: 16px;
+  }
+
+  .scanner-card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(15, 23, 42, 0.95);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+    border: 1px solid rgba(148,163,184,0.15);
+  }
+
+  .title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #38bdf8;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 16px;
+  }
+
+  input {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(148,163,184,0.25);
+    background: #020617;
+    color: #e5e7eb;
+    font-size: 15px;
+    outline: none;
+    margin-bottom: 14px;
+  }
+
+  input::placeholder {
+    color: #64748b;
+  }
+
+  video {
+    width: 100%;
+    border-radius: 14px;
+    background: #000;
+    border: 1px solid rgba(148,163,184,0.2);
+    margin-bottom: 14px;
+  }
+
+  button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    color: #020617;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(56,189,248,0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  button:active {
+    transform: scale(0.97);
+    box-shadow: 0 6px 14px rgba(56,189,248,0.25);
+  }
+
+  #status {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 14px;
+    color: #a5f3fc;
+    min-height: 18px;
+  }
+
+  .footer {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 11px;
+    color: #64748b;
+  }
+</style>
 </head>
 
 <body>
 
-<input id="userId" placeholder="Enter User ID" />
-<video id="video" autoplay playsinline></video>
-<button onclick="startScan()">Start Scan</button>
-<div id="status"></div>
+<div class="scanner-card">
+  <div class="title">📷 Smart Scanner</div>
+  <div class="subtitle">Scan QR / Barcodes securely</div>
+
+  <input id="userId" placeholder="Enter User ID (required)" />
+
+  <video id="video" autoplay playsinline></video>
+
+  <button onclick="startScan()">Start Scan</button>
+
+  <div id="status"></div>
+
+  <div class="footer">
+    Data stored securely in Google Sheets
+  </div>
+</div>
 
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwiVwDFnspMbp29p7XKR0i-I-ZpMQTjvX5Uk2NaCpQiyJSlzbwDDoH4Vb3XG3WFwc7C/exec";
@@ -22,10 +135,15 @@ const status = document.getElementById("status");
 let scanning = false;
 
 async function startScan() {
-  if (!userIdInput.value) {
-    alert("Enter User ID");
+  if (!userIdInput.value.trim()) {
+    alert("Please enter User ID");
     return;
   }
+
+  if (scanning) return;
+  scanning = true;
+
+  status.innerText = "📸 Opening camera...";
 
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { facingMode: "environment" }
@@ -34,12 +152,16 @@ async function startScan() {
   video.srcObject = stream;
   const detector = new BarcodeDetector({ formats: ["qr_code"] });
 
+  status.innerText = "🔍 Scanning...";
+
   const interval = setInterval(async () => {
     const codes = await detector.detect(video);
     if (codes.length) {
       clearInterval(interval);
       stream.getTracks().forEach(t => t.stop());
+      status.innerText = "✅ Scan successful";
       saveToSheet(codes[0].rawValue);
+      scanning = false;
     }
   }, 800);
 }
